@@ -1,4 +1,4 @@
-# AI_metrology
+# AI_metrology- shearography studies 
 
 Universidade Federal de Santa Catarina
 Pós graduação em engenharia mecânica
