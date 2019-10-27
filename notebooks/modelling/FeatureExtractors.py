@@ -6,14 +6,18 @@ Created on Sun Oct 27 17:12:38 2019
 
 @author: Herberth Frohlich
 """
+import numpy as np
+import pandas as pd
 
-class FeatureExtractors:
+class FeatureExtractors():
     
-    def __init__():
+    def __init__(self):
         pass
     
     def stdev_method(self, image):
         
+        
+    
         
         pass
     
