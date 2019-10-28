@@ -10,9 +10,9 @@ REGRESSION METHODS
 
 class RegressionMethods:
     
-    def __init__():
-        pass
-    
     def RandomForestRegressor(self, data):
         
+		
+		
+		
         pass
