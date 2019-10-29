@@ -10,6 +10,10 @@ REGRESSION METHODS
 
 class RegressionMethods:
     
+	def __init__(self):
+		pass
+	
+	
     def RandomForestRegressor(self, data):
         
 		
