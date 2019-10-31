@@ -16,9 +16,11 @@ from keras.layers import Dense, Dropout, Flatten
 from keras.layers import Conv2D, MaxPooling2D
 from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping
+from keras.models import load_model
 sys.path.insert(1, r'D:\Users\Herberth Frohlich\Documents\AI_shearo\notebooks\modelling')
 
 BATCH_SIZE = 8
+LEARNING_RATE = 1e-03
 
 # Loading Shearography Images
 trainPath = (r"D:\MachineLearningInOpticsExtrapolation\NoDecompositionRegressionFull\TrainSet")
@@ -60,16 +62,16 @@ y_val = valAttrX[0] / maxEnergy
 #model = models.create_cnn(dim[0], dim[1], 1, filters = (16,32,64), regress=True)
 input_shape = (dim[0], dim[1], 1)
 model = Sequential()
-model.add(Conv2D(32, kernel_size=(3, 3),activation='relu',input_shape=input_shape))
+model.add(Conv2D(64, kernel_size=(3, 3),activation='relu',input_shape=input_shape))
 #model.add(Conv2D(128, (3, 3), activation='relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 #model.add(Dropout(0.25))
-model.add(Conv2D(16, kernel_size=(3, 3),activation='relu',input_shape=input_shape))
+model.add(Conv2D(32, kernel_size=(3, 3),activation='relu')
 #model.add(Conv2D(128, (3, 3), activation='relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 #model.add(Dropout(0.25))
 model.add(Flatten())
-model.add(Dense(32, activation='relu'))
+model.add(Dense(256, activation='relu'))
 #model.add(Dropout(0.5))
 model.add(Dense(1, activation="linear"))
 
@@ -85,7 +87,11 @@ model.fit(trainImagesX, y_train,
           callbacks=[es], 
           steps_per_epoch = len(y_train) // BATCH_SIZE, 
           validation_steps = len(y_val) // BATCH_SIZE)
+
+#model.save('cnn_regression.h5')
+
 #%%
+#model = load_model('my_model.h5')
 # Testing interpolation
 from sklearn.metrics import mean_absolute_error, r2_score
 y_predT = model.predict(testImagesX)

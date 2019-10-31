@@ -30,7 +30,7 @@ valPath = (r"D:\MachineLearningInOpticsExtrapolation\NoDecompositionRegressionFu
 trainAttrX = pd.read_csv(os.path.join(trainPath, "trainEnergies.txt"), header=None)
 testAttrX = pd.read_csv(os.path.join(testPath, "testEnergies.txt"), header=None)
 valAttrX = pd.read_csv(os.path.join(valPath, "valEnergies.txt"), header=None)
-dim = (200, 200)
+dim = (128, 128)
 cells_per_block = (2, 2)
 pixels_per_cell = (24, 24) 
 orientations = 8
@@ -113,7 +113,7 @@ y_val = valAttrX[0] / maxEnergy
 # pca
 from sklearn.decomposition import PCA
 
-pca = PCA(svd_solver = 'full', n_components=250)
+pca = PCA(svd_solver = 'full', n_components=150)
 pca.fit(X_train_hog)
 X_train_hog_pca = pca.transform(X_train_hog)
 X_val_hog_pca = pca.transform(X_val_hog)
@@ -129,9 +129,9 @@ plt.plot(cumulative)
 #reg = RegressionMethods()
 #%% 
 
-X_train = X_train_hog_pca
-X_test = X_test_hog_pca
-X_val= X_val_hog_pca
+X_train = X_train
+X_test = X_test
+X_val= X_val
 
   
 from sklearn.ensemble import RandomForestRegressor
