@@ -31,7 +31,7 @@ valPath = (r"D:\MachineLearningInOpticsExtrapolation\NoDecompositionRegressionFu
 trainAttrX = pd.read_csv(os.path.join(trainPath, "trainEnergies.txt"), header=None)
 testAttrX = pd.read_csv(os.path.join(testPath, "testEnergies.txt"), header=None)
 valAttrX = pd.read_csv(os.path.join(valPath, "valEnergies.txt"), header=None)
-dim = (329, 329)
+dim = (64, 64)
 cells_per_block = (2, 2)
 pixels_per_cell = (24, 24) 
 orientations = 8
@@ -142,21 +142,25 @@ X_test_hog = np.load("X_test_hog_329_2_24_8.npy")
 #%%
 # pca
 from sklearn.decomposition import PCA
-pca = PCA(svd_solver = 'full', n_components=850)
-pca.fit(X_train_hog)
-X_train_hog_pca = pca.transform(X_train_hog)
-X_val_hog_pca = pca.transform(X_val_hog)
-X_test_hog_pca = pca.transform(X_test_hog)
+def pca_(vectorTrain, vectorTest, vectorVal, n=1000):
+    pca = PCA(svd_solver = 'full', n_components=n)
+    pca.fit(vectorTrain)
+    X_train_pca = pca.transform(vectorTrain)
+    X_val_pca = pca.transform(vectorVal)
+    X_test_pca = pca.transform(vectorTest)
+    return X_train_pca, X_test_pca, X_val_pca, pca
+#%%
+X_train_pca, X_test_pca, X_val_pca, pca = pca_(X_train, X_test, X_val, n=15)
 cumulative = np.cumsum(pca.explained_variance_ratio_)
 plt.plot(cumulative)
 ## calling regression
 #from RegressionMethods import RegressionMethods
 #reg = RegressionMethods()
 #%% 
-
-X_train_USE = X_train_hog_pca
-X_test_USE = X_test_hog_pca
-X_val_USE = X_val_hog_pca
+tipo = "dev + pca"
+X_train_USE = X_train_pca
+X_test_USE = X_test_pca
+X_val_USE = X_val_pca
 
 def mean_absolute_percentage_error(y_true, y_pred): 
     y_true, y_pred = np.array(y_true), np.array(y_pred)
@@ -165,9 +169,9 @@ def mean_absolute_percentage_error(y_true, y_pred):
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import r2_score
 
-N_ESTIMATORS = 30
-MAX_DEPTH = 7
-MIN_SAMPLES_SPLIT = 7
+N_ESTIMATORS = 70 
+MAX_DEPTH = 9
+MIN_SAMPLES_SPLIT = 2
 
 reg = RandomForestRegressor(n_estimators=N_ESTIMATORS, oob_score=True, 
                             verbose=0, max_depth=MAX_DEPTH,
@@ -204,11 +208,11 @@ ax.scatter(np.arange(len(y_predT)), y_predT, s=15)
 ax.set_title("TestSet - MAPE: {}, R2Score: {}".format(np.round(testMAE,3), np.round(testScore,3)))
 ax.set_ylabel("Energy[J]")
 ax.set_xlabel("Observations")
-fig.suptitle("IMG DIM: {}, N_ESTIMATORS: {}, MAX_DEPTH: {}, LEAF_SIZE: {} ".format(dim[0], N_ESTIMATORS, MAX_DEPTH, MIN_SAMPLES_SPLIT))
+fig.suptitle("TYPE: {}, IMG DIM: {}, N_ESTIMATORS: {}, MAX_DEPTH: {}, LEAF_SIZE: {} ".format(tipo, dim[0], N_ESTIMATORS, MAX_DEPTH, MIN_SAMPLES_SPLIT))
 plt.show()
 
 #%%
-
+# TODO GRID SEARCH
 # TODO ERROR BAR PLOT
     
     
