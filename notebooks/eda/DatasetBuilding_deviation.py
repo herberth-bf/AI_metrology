@@ -17,7 +17,6 @@ import sys
 import pandas as pd
 import numpy as np
 import cv2
-import statsmodels.api as sm
 import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
 from skimage.feature import hog
@@ -25,32 +24,22 @@ from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, V
 from sklearn.metrics import r2_score, mean_absolute_error
 from scipy.optimize import minimize
 
-sys.path.insert(1, r'D:\Users\Herberth Frohlich\Documents\AI_shearo\notebooks\modelling')
+sys.path.append(r'D:\Users\Herberth Frohlich\Documents\AI_shearo\notebooks\modelling')
+# Importing users build
+from Helpers import Loaders
+load = Loaders()# use load_images
+from FeatureExtractors import FeatureExtractors
+extract = FeatureExtractors() # use deviations
+from Processing import Processing
+process = Processing() # use lowess_smooth
 
 # Loading Shearography Images
 trainPath = (r"D:\MachineLearningInOpticsExtrapolation\NoDecompositionRegressionFull\TrainSet")
 testPath = (r"D:\MachineLearningInOpticsExtrapolation\NoDecompositionRegressionFull\TestSet")
 valPath = (r"D:\MachineLearningInOpticsExtrapolation\NoDecompositionRegressionFull\ValSet")
-
 trainAttrX = pd.read_csv(os.path.join(trainPath, "trainEnergies.txt"), header=None)
 testAttrX = pd.read_csv(os.path.join(testPath, "testEnergies.txt"), header=None)
 valAttrX = pd.read_csv(os.path.join(valPath, "valEnergies.txt"), header=None)
-
-cells_per_block = (2, 2)
-pixels_per_cell = (24, 24) 
-orientations = 8
-lowess = sm.nonparametric.lowess
-FRAC = 0.05 # fraction for lowess
-
-def load_images(inputPath,dim):
-    images = []
-    files = sorted(glob.glob(os.path.join(inputPath, "*.bmp")))
-    files = sorted(files, key=lambda x:float(re.findall("(\d+)",x)[0]))
-    for f in files:
-        im = cv2.imread(f, 0)
-        resized = cv2.resize(im, dim)
-        images.append(resized)
-    return np.array(images), files
 
 # making sure they are in crescent order and other preprocessing
 maxEnergy = trainAttrX[0].max() 
@@ -60,90 +49,32 @@ y_val = valAttrX[0]# / maxEnergy
 indxTest = np.argsort(y_test)
 indxVal = np.argsort(y_val)
 
-# Getting image size template for further matrices initialization
-#image = valImagesX[157, :, :]
-#fd_pattern, _ = hog(image, orientations=orientations, pixels_per_cell=pixels_per_cell, 
-#               cells_per_block=cells_per_block, visualize=True, multichannel=False,  block_norm ='L1')
-#cv2.imshow("", image)
-#hog_size = len(fd_pattern)
-#print(hog_size)
-
-def deviations(image):
-    matrix = np.zeros((2, image.shape[1]))
-    matrix[0,:] = np.std(image, axis=1) 
-    matrix[1,:] = np.std(image, axis=0) 
-    matrix = matrix.reshape(1, -1)
-    return matrix
-
-#matrix_example = deviations(image)
-#plt.plot(np.transpose(matrix_example))
-
-# Acquisition of features via deviation of rows and columns and hog at the same time
-
 def feature_acquisition(dim):
-    
-    images_train, files_train = load_images(trainPath, dim)
+    images_train, files_train = load.load_images(trainPath, dim)
     trainImagesX = images_train# / 255.0
-    #trainImagesX = trainImagesX.reshape(-1, dim[0], dim[1], 1)
-    images_test, files_test = load_images(testPath, dim)
+    images_test, files_test = load.load_images(testPath, dim)
     testImagesX = images_test# / 255.0
-    #testImagesX = testImagesX.reshape(-1, dim[0], dim[1], 1)
-    images_val, files_val = load_images(valPath, dim)
+    images_val, files_val = load.load_images(valPath, dim)
     valImagesX  = images_val# / 255.0
-    #valImagesX = valImagesX.reshape(-1, dim[0], dim[1], 1)
-    
-    #X_train_hog = np.empty((0, hog_size))
     X_train = np.empty((0, dim[0]*2))
-    #X_train_smooth = np.empty((0, dim[0]*2))
+
     for i in range(trainImagesX.shape[0]):
-        #print("train image {}".format(i))
         im = trainImagesX[i, :, :]
-        X_train = np.append(X_train, deviations(im), axis=0)
-    #    dev_smooth = (lowess(deviations(im).reshape(-1,), np.arange(int(dim[0]*2)), frac=FRAC)).transpose()
-    #    X_train_smooth = np.append(X_train_smooth, dev_smooth[1,:].reshape(1,-1), axis=0)
-    #    fd, _ = hog(im, orientations=orientations, pixels_per_cell=pixels_per_cell, 
-    #                cells_per_block=cells_per_block, visualize=True, multichannel=False,  block_norm ='L1')
-    #    X_train_hog = np.append(X_train_hog, fd.reshape(1,hog_size), axis=0)
-    #np.save("X_train_smooth_329_005", X_train_smooth)   
-    #np.save("X_train_hog_329_2_24_8", X_train_hog)   
-        
-    #X_val_hog = np.empty((0, hog_size))
+        X_train = np.append(X_train, extract.deviations(im), axis=0)
     X_val = np.empty((0, dim[0]*2))
-    #X_val_smooth = np.empty((0, dim[0]*2))
-    for i in range(valImagesX.shape[0]):
-        #print("val image {}".format(i))
-        im = valImagesX[i, :, :]
-        X_val = np.append(X_val, deviations(im), axis=0)
-    #    dev_smooth = (lowess(deviations(im).reshape(-1,), np.arange(int(dim[0]*2)), frac=FRAC)).transpose()
-    #    X_val_smooth = np.append(X_val_smooth, dev_smooth[1,:].reshape(1,-1), axis=0)
-    #    fd, _ = hog(im, orientations=orientations, pixels_per_cell=pixels_per_cell, 
-    #                cells_per_block=cells_per_block, visualize=True, multichannel=False,  block_norm ='L1')
-    #    X_val_hog = np.append(X_val_hog,  fd.reshape(1, hog_size), axis=0)
-    #np.save("X_val_smooth_329_005", X_val_smooth)
-    #np.save("X_val_hog_329_2_24_8", X_val_hog)     
     
-    #X_test_hog = np.empty((0, hog_size))
+    for i in range(valImagesX.shape[0]):
+        im = valImagesX[i, :, :]
+        X_val = np.append(X_val, extract.deviations(im), axis=0)
+
     X_test = np.empty((0, dim[0]*2))
-    #X_test_smooth = np.empty((0, dim[0]*2))
+    
     for i in range(testImagesX.shape[0]):
-        #print("test image {}".format(i))
         im = testImagesX[i, :, :]
-        X_test = np.append(X_test, deviations(im), axis=0)
-    #    dev_smooth = (lowess(deviations(im).reshape(-1,), np.arange(int(dim[0]*2)), frac=FRAC)).transpose()
-    #    X_test_smooth = np.append(X_test_smooth, dev_smooth[1,:].reshape(1,-1), axis=0)
-    #    fd, _ = hog(im, orientations=orientations, pixels_per_cell=pixels_per_cell, 
-    #                cells_per_block=cells_per_block, visualize=True, multichannel=False,  block_norm ='L1')
-    #    X_test_hog = np.append(X_test_hog, fd.reshape(1,hog_size), axis=0)
-    #np.save("X_test_smooth_329_005", X_test_smooth)
-    #np.save("X_test_hog_329_2_24_8", X_test_hog)
+        X_test = np.append(X_test, extract.deviations(im), axis=0)
+    
     return X_train, X_val, X_test
 
-#X_train_hog = np.load("X_train_hog_329_2_24_8.npy")  
-#X_train_smooth = np.load("X_train_smooth_329_005.npy")
-#X_val_hog = np.load("X_val_hog_329_2_24_8.npy")  
-#X_val_smooth = np.load("X_val_smooth_329_005.npy")
-#X_test_smooth = np.load("X_test_smooth_329_005.npy")
-#X_test_hog = np.load("X_test_hog_329_2_24_8.npy")
 
 #%% Helper functions
 # pca

@@ -12,16 +12,12 @@ from skimage.feature import hog
 
 class FeatureExtractors:
     
-    def __init__(self):
-        pass
+	def __init__(self):
+		pass
     
-    def stdev_method(self, image):
-        
-        pass
-    
-    
-    def hog_extraction(self, image, orientations=8, pixels_per_cell=(16, 16), cells_per_block=(1, 1), visualize=True, multichannel=False):
-        
-        fd, hog_image = hog(image, orientations=orientations, pixels_per_cell=pixels_per_cell, cells_per_block=cells_per_block, visualize=visualize, multichannel=multichannel)
-		
-        return fd, hog_image
+	def deviations(self, image):
+		matrix = np.zeros((2, image.shape[1]))
+		matrix[0,:] = np.std(image, axis=1) 
+		matrix[1,:] = np.std(image, axis=0) 
+		matrix = matrix.reshape(1, -1)
+		return matrix
