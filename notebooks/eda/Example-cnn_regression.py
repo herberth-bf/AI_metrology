@@ -76,7 +76,7 @@ model.add(Dense(256, activation='relu'))
 model.add(Dense(1, activation="linear"))
 
 opt = Adam(lr=LEARNING_RATE, decay=1e-3 / 200)
-model.compile(loss="mean_absolute_percentage_error", optimizer=opt)
+model.compile(loss="mean_absolute_error", optimizer=opt)
 
 # train the model
 print("[INFO] training model...")
@@ -91,7 +91,7 @@ model.fit(trainImagesX, y_train,
 #model.save('cnn_regression.h5')
 
 #%%
-#model = load_model('my_model.h5')
+model = load_model('cnn_regression.h5')
 # Testing interpolation
 from sklearn.metrics import mean_absolute_error, r2_score
 y_predT = model.predict(testImagesX)
@@ -100,3 +100,29 @@ testScore = r2_score(y_test, y_predT)
 print(testMAE, testScore)
 plt.scatter(np.arange(len(y_test.values)), y_test.values, s=15)
 plt.scatter(np.arange(len(y_predT)), y_predT, s=15)
+
+
+# fix 10th energy position
+
+ind_test = np.argsort(y_test.values)
+y_true = y_test.values[ind_test]
+y_hat = y_predT[ind_test]
+
+
+fig, axs = plt.subplots(nrows=1, ncols=1, sharex=False)
+#ax = axs[0]
+#ax.scatter(np.arange(len(y_val_.values)), y_val_.values, s=5)
+#ax.scatter(np.arange(len(y_pred)), y_pred, s=15)
+#ax.set_title("ValSet - MAPE: {}, R2Score: {}".format(np.round(valMAPE,3), np.round(valScore,3)))
+#ax.set_ylabel("Energy[J]")
+#ax.set_xlabel("Observations")
+
+tipo = "CNN for regression"
+ax = axs
+
+ax.scatter(np.arange(len(y_true)), y_true*10, s=5)
+ax.scatter(np.arange(len(y_hat)), y_hat*10, s=15)
+ax.set_title("CNN for Regression - TestSet - MAE: {}".format(np.round(testMAE,3)))
+ax.set_ylabel("Energy[J]")
+ax.set_xlabel("Observations")
+plt.show()

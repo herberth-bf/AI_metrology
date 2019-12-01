@@ -6,10 +6,10 @@ Created on Sun Oct 27 17:12:38 2019
 
 @author: Herberth Frohlich
 """
+import os
 import glob
 import re
 import numpy as np
-import pandas as pd
 import cv2
 
 class Loaders:
@@ -26,13 +26,3 @@ class Loaders:
 			resized = cv2.resize(im, dim)
 			images.append(resized)
 		return np.array(images), files
-		
-		
-class Metrics:
-
-	def __init__(self):
-		pass
-
-	def mean_absolute_percentage_error(self, y_true, y_pred): 
-		y_true, y_pred = np.array(y_true), np.array(y_pred)
-		return np.mean(np.abs((y_true - y_pred) / y_true)) * 100

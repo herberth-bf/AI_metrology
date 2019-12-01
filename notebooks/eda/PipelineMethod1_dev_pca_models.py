@@ -15,23 +15,24 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
 from sklearn.metrics import mean_absolute_error, r2_score
+from sklearn.decomposition import PCA
 
 # Paths
-sys.path.append(r'D:\Users\Herberth Frohlich\Documents\AI_shearo\notebooks\modelling')
+sys.path.append(r'D:\Users\Herberth Frohlich\Documents\AI_shearo\notebooks')
 save_path = (r'D:\Users\Herberth Frohlich\Documents\AI_shearo\dataset\processed')
 
 # Importing users methods
-from Helpers import Loaders
+from modelling.Helpers import Loaders
 load = Loaders()# use load_images
-from FeatureExtractors import FeatureExtractors
+from modelling.FeatureExtractors import FeatureExtractors
 extract = FeatureExtractors() # use deviations
-from Processing import Processing
+from modelling.Processing import Processing
 process = Processing() # use lowess_smooth
-from Processing import FeatureReduction
+from modelling.Processing import FeatureReduction
 reduction = FeatureReduction() # use pca_
-from Helpers import Metrics
+from modelling.Metrics import Metrics
 metrics = Metrics() #use mean_absolute_percentage_error
-from RegressionMethods import RegressionMethods
+from modelling.RegressionMethods import RegressionMethods
 regression = RegressionMethods() #import RandomForestRegressor, GradientBoostingRegressor etc
 
 # Loading Shearography Images
@@ -106,16 +107,16 @@ for d in DIM:
                     
                     #print("Count:{} --> Dimension {}, Component {}, Estimators {}, Max Depth {}, Min Sample Split {}".format(count, d, c, n, m, s))
                     # Fitting the model: random forest
-                    reg1, reg1n = regression.RandomForestRegressor(X_train_USE, y_train, n_estimators=n, oob_score=True, 
+                    reg1, reg1n = regression.random_forest_regressor(X_train_USE, y_train, n_estimators=n, oob_score=True, 
                                                             verbose=0, max_depth=m, min_samples_split=s)    
                     
                     # Fitting the model: gradient boosting
-                    reg2, reg2n = regression.GradientBoostingRegressor(X_train_USE, y_train,n_estimators=n,
+                    reg2, reg2n = regression.gradient_boosting_regressor(X_train_USE, y_train,n_estimators=n,
                                                                 max_depth=m, min_samples_split=s)    
                     
                     # Averaged by voting
                     estimators = [('rf', reg1n), ('gb', reg2n)]
-                    ereg = regression.VotingRegressor(X_train_USE, y_train, *estimators)
+                    ereg = regression.voting_regressor(X_train_USE, y_train, *estimators)
                     ereg.fit(X_train_USE, y_train)
                     
                     # Validation
@@ -181,11 +182,13 @@ index = np.argmax(cumulative>=cBest)
 X_train_USE = X_train_USE[:, index:]
 X_val_USE = X_val_USE[:, index:]
 X_test_USE = X_test_USE[:, index:]
-reg1_best, reg1n_best = regression.RandomForestRegressor(n_estimators=nBest, 
-                                                         max_depth=mBest, 
-                                                         min_samples_split=sBest)
+reg1_best, reg1n_best = regression.random_forest_regressor(X_train_USE, y_train,
+                                                           n_estimators=nBest, 
+                                                          max_depth=mBest, 
+                                                          min_samples_split=sBest)
 
-reg2_best, reg2n_best = regression.GradientBoostingRegressor(n_estimators=nBest, 
+reg2_best, reg2n_best = regression.gradient_boosting_regressor(X_train_USE, y_train,
+                                                               n_estimators=nBest, 
                                                              max_depth=mBest, 
                                                              min_samples_split=sBest)
 
@@ -197,8 +200,9 @@ reg2_mae_best = mean_absolute_error(y_val, y_pred_reg2_best)
 #%% Automatic weighting by optimization
 # TODO SUBSTITUIR PELA FUNCAO IMPLEMENTADA EM SERVICO
 dic = [('gb', reg1_best), ('rf', reg2_best)]
+
 def fun(x):    
-    ereg = regression.VotingRegressor(X_train_USE, y_train, weights = x, *dic, )#[0.19, 0.51, 0.30]
+    ereg = VotingRegressor(dic, weights = x )#[0.19, 0.51, 0.30]
     ereg.fit(X_train_USE, y_train)
     ereg_mae = mean_absolute_error(y_val, ereg.predict(X_val_USE))
     return ereg_mae
@@ -206,8 +210,8 @@ def fun(x):
 cons = ({'type': 'eq', 'fun': lambda x:  x[0] + x[1] - 1})
 bnds = ((0, 1), (0, 1))
 
-x = [0.5, 0.5]
-result = minimize(fun, x, method="SLSQP", bounds=bnds, constraints=cons, tol=1e-2)
+x = [0.1, 0.1]
+result = minimize(fun, x, method="SLSQP", bounds=bnds, constraints=cons, tol=0.1, options={'disp': True})
 
 if result.success:
     fitted_params = result.x
@@ -215,30 +219,32 @@ if result.success:
 else:
     raise ValueError(result.message)
 
-#%% Voting fiting 
+#%% Voting fiting
+from sklearn.ensemble import VotingRegressor
 dic = [('rf', reg1_best), ('gb', reg2_best)]
-ereg = VotingRegressor(dic, weights = fitted_params)#[0.19, 0.51, 0.30]
+ereg = VotingRegressor(dic, weights = [0.5, 0.5])#[0.19, 0.51, 0.30]
 ereg.fit(X_train_USE, y_train)
 ereg_mae = mean_absolute_error(y_val, ereg.predict(X_val_USE))
 print('RandomForest {}, GB {}, Voting Regressor {}'.format(reg1_mae_best, reg2_mae_best, ereg_mae))
 
-#%%
+#%% LOADING BEST MODEL
 
 ereg_best = VotingRegressor([('rf', reg1_best), ('gb', reg2_best)])
 ereg_best.fit(X_train_USE, y_train)
 
 import pickle
 filename = 'dev+pca+voting.sav'
-pickle.dump(ereg_best, open(filename, 'wb'))
+#pickle.dump(ereg_best, open(filename, 'wb'))
+ereg_best = pickle.load(open(filename, 'rb'))
 
 #%% Interpolation and testing - model proofing    
 #ereg_best = pickle.load(open(filename, 'rb'))           
 # Testing interpolation
 y_predT = ereg_best.predict(X_test_USE)
 testMAE = mean_absolute_error(y_test, y_predT)
-testMAPE = mean_absolute_percentage_error(y_test, y_predT)
+#testMAPE = mean_absolute_percentage_error(y_test, y_predT)
 testScore = r2_score(y_test, y_predT) 
-print(testMAE, testMAPE)
+#print(testMAE, testMAPE)
 y_test_ = y_test[indxTest]
 y_predT = y_predT[indxTest]
 
@@ -257,7 +263,7 @@ tipo = "DEV + PCA +  RF - voting"
 ax = axs
 ax.scatter(np.arange(len(y_test_.values)), y_test_.values, s=5)
 ax.scatter(np.arange(len(y_predT)), y_predT, s=15)
-ax.set_title("TestSet - MAE: {}, MAPE: {}".format(np.round(testMAE,3), np.round(testMAPE,3)))
+ax.set_title("TestSet - MAE: {}".format(np.round(testMAE,3)))
 ax.set_ylabel("Energy[J]")
 ax.set_xlabel("Observations")
 fig.suptitle("TYPE: {}, IMG DIM: {}, N_ESTIMATORS: {}, MAX_DEPTH: {}, LEAF_SIZE: {} ".format(tipo, dimBest[0], nBest, mBest, sBest))

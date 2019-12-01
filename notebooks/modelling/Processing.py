@@ -7,6 +7,7 @@ Processing METHODS
 
 @author: Herberth Frohlich
 """
+import os
 import statsmodels.api as sm
 from sklearn.decomposition import PCA
 
